@@ -13,11 +13,12 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <title>InvoiceScan</title>
 
-  <!-- Tesseract.js OCR engine -->
+  <!-- Tesseract.js 5 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
+  <!-- EmailJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <style>
-    /* ── RESET & BASE ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #F8F9FA; --card: #FFFFFF; --primary: #2563EB; --primary-dark: #1D4ED8;
@@ -32,15 +33,13 @@
       -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── APP SHELL ── */
     #app { display: flex; flex-direction: column; height: 100%; max-width: 430px; margin: 0 auto; position: relative; }
     .screen { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-    /* ── HEADER ── */
+    /* HEADER */
     .header {
       background: linear-gradient(135deg, var(--primary), #7C3AED);
-      color: #fff; padding: calc(var(--sat) + 16px) 20px 18px; text-align: center; position: relative;
-      flex-shrink: 0;
+      color: #fff; padding: calc(var(--sat) + 16px) 20px 18px; text-align: center; position: relative; flex-shrink: 0;
     }
     .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
     .header p { font-size: 13px; opacity: 0.85; margin-top: 3px; }
@@ -49,9 +48,8 @@
       border: none; border-radius: 10px; padding: 8px; cursor: pointer; color: #fff;
     }
     .hdr-btn.left { left: 14px; }
-    .hdr-btn.right { right: 14px; }
 
-    /* ── TAB BAR ── */
+    /* TAB BAR */
     .tab-bar {
       display: flex; border-top: 1px solid var(--border); background: var(--card);
       padding-bottom: var(--sab); flex-shrink: 0;
@@ -64,7 +62,7 @@
     .tab.active { color: var(--primary); }
     .tab svg { width: 22px; height: 22px; }
 
-    /* ── BUTTONS ── */
+    /* BUTTONS */
     .btn {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       padding: 16px 24px; border: none; border-radius: 14px;
@@ -75,32 +73,36 @@
     .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); font-size: 15px; padding: 14px 24px; }
     .btn-send { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; font-weight: 700; }
     .btn-secondary { background: transparent; color: var(--text-sec); border: 1.5px solid var(--border); }
-    .btn-sm { padding: 10px 16px; font-size: 14px; border-radius: 10px; width: auto; }
     .btn:disabled { opacity: 0.5; pointer-events: none; }
+    .btn-sending { background: var(--text-sec); pointer-events: none; }
     input[type="file"] { display: none; }
 
-    /* ── BANNERS ── */
+    /* BANNERS */
     .banner { margin: 14px 20px 0; padding: 11px 14px; border-radius: 10px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
     .banner-warn { background: #FEF3C7; color: #92400E; cursor: pointer; }
     .banner-ok { background: rgba(16,185,129,0.08); color: var(--accent); }
+    .banner-err { background: #FEE2E2; color: #991B1B; }
 
-    /* ── CAPTURE ── */
+    /* CAPTURE */
     .capture-area { padding: 24px 20px; display: flex; flex-direction: column; gap: 12px; }
 
-    /* ── CARD ── */
+    /* CARD */
     .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px; }
     .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 
-    /* ── FIELDS ── */
+    /* FIELDS */
     .field { margin-bottom: 14px; }
     .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
-    .field input {
+    .field input, .field textarea {
       width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px;
       font-size: 15px; color: var(--text); background: var(--input-bg); outline: none; transition: border-color 0.2s;
+      font-family: inherit;
     }
-    .field input:focus { border-color: var(--primary); }
+    .field input:focus, .field textarea:focus { border-color: var(--primary); }
+    .field textarea { resize: vertical; min-height: 60px; }
+    .field .hint { font-size: 11px; color: var(--text-sec); margin-top: 4px; }
 
-    /* ── TYPE SELECTOR ── */
+    /* TYPE SELECTOR */
     .type-row { display: flex; gap: 8px; margin-bottom: 16px; }
     .type-btn {
       flex: 1; padding: 9px 0; border-radius: 8px; font-size: 13px; font-weight: 600;
@@ -109,24 +111,23 @@
     }
     .type-btn.active { border-color: var(--primary); background: rgba(37,99,235,0.08); color: var(--primary); }
 
-    /* ── EMAIL PREVIEW ── */
+    /* EMAIL PREVIEW */
     .email-box { background: rgba(37,99,235,0.04); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; border: 1px solid rgba(37,99,235,0.12); }
     .email-box .lbl { font-size: 10px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
     .email-box .val { font-size: 13px; line-height: 1.5; word-break: break-word; }
 
-    /* ── ACTIONS ROW ── */
+    /* ACTIONS */
     .actions { display: flex; gap: 12px; }
     .actions > * { flex: 1; }
     .actions > .btn-send { flex: 2; }
 
-    /* ── IMAGE PREVIEW ── */
+    /* IMAGE PREVIEW */
     .img-preview { border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); max-height: 180px; }
     .img-preview img { width: 100%; object-fit: cover; display: block; max-height: 180px; }
 
-    /* ── RESULTS SCREEN ── */
     .results-screen { padding: 20px; }
 
-    /* ── HISTORY ── */
+    /* HISTORY */
     .history-screen { padding: 20px; }
     .history-item {
       background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 10px;
@@ -139,30 +140,39 @@
     .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
     .empty-state h3 { font-size: 17px; color: var(--text); margin-bottom: 6px; }
 
-    /* ── SETTINGS ── */
+    /* SETTINGS */
     .settings-screen { padding: 20px; }
     .settings-section { margin-bottom: 24px; }
     .settings-section h4 { font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
     .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-    .settings-row .val { color: var(--text-sec); }
+    .settings-row .val { color: var(--text-sec); font-size: 13px; }
+    .settings-help { font-size: 12px; color: var(--text-sec); line-height: 1.5; margin-top: 6px; }
 
-    /* ── OVERLAY / PROCESSING ── */
+    /* OVERLAY */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .overlay-card { background: var(--card); border-radius: 20px; padding: 32px 40px; text-align: center; max-width: 290px; width: 90%; }
+    .overlay-card { background: var(--card); border-radius: 20px; padding: 32px 36px; text-align: center; max-width: 300px; width: 90%; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { width: 44px; height: 44px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
     .pbar { margin-top: 12px; height: 6px; border-radius: 3px; background: var(--input-bg); overflow: hidden; }
     .pbar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
 
-    /* ── TOAST ── */
+    /* TOAST */
     .toast {
       position: fixed; bottom: calc(70px + var(--sab)); left: 50%; transform: translateX(-50%);
-      background: var(--accent); color: #fff; padding: 12px 24px; border-radius: 12px;
-      font-size: 14px; font-weight: 600; box-shadow: 0 4px 14px rgba(16,185,129,0.35);
-      z-index: 300; display: flex; align-items: center; gap: 8px;
-      animation: toast-in 0.3s ease;
+      padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.2); z-index: 300; display: flex; align-items: center; gap: 8px;
+      animation: toast-in 0.3s ease; color: #fff;
     }
+    .toast-ok { background: var(--accent); }
+    .toast-err { background: var(--danger); }
     @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(16px); } }
+
+    /* RAW TEXT TOGGLE */
+    .raw-toggle { font-size: 13px; color: var(--primary); cursor: pointer; font-weight: 600; margin-top: 8px; display: inline-block; }
+    .raw-text { background: var(--input-bg); border-radius: 8px; padding: 12px; font-size: 12px; font-family: monospace; line-height: 1.6; max-height: 200px; overflow-y: auto; margin-top: 8px; white-space: pre-wrap; word-break: break-all; }
+
+    /* Hidden canvas for image processing */
+    #process-canvas { display: none; }
 
     .hidden { display: none !important; }
   </style>
@@ -170,8 +180,9 @@
 <body>
 
 <div id="app">
+  <canvas id="process-canvas"></canvas>
 
-  <!-- ════════════════ HEADER ════════════════ -->
+  <!-- HEADERS -->
   <div class="header" id="header-main">
     <h1>InvoiceScan</h1>
     <p>Digitaliza faturas e recibos</p>
@@ -184,31 +195,28 @@
     <p>Verifica e corrige antes de enviar</p>
   </div>
 
-  <!-- ════════════════ SCREENS ════════════════ -->
-
-  <!-- SCAN -->
+  <!-- ═══ SCAN SCREEN ═══ -->
   <div id="scr-scan" class="screen">
     <div id="banner-warn" class="banner banner-warn hidden" onclick="switchTab('settings')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Define o email de destino nas Definições
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Configura o EmailJS nas Definições para enviar emails
     </div>
     <div id="banner-ok" class="banner banner-ok hidden">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       A enviar para: <strong id="banner-email"></strong>
     </div>
 
     <div class="capture-area">
       <button class="btn btn-primary" onclick="openCamera()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         Fotografar Documento
       </button>
       <button class="btn btn-outline" onclick="openGallery()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         Importar da Galeria
       </button>
     </div>
 
-    <!-- Recent history on scan tab -->
     <div id="scan-history" class="hidden" style="padding:0 20px 20px">
       <h3 style="font-size:14px;font-weight:700;margin-bottom:10px">Recentes</h3>
       <div id="scan-history-list"></div>
@@ -218,7 +226,7 @@
     <input type="file" id="inp-gallery" accept="image/*,.pdf" onchange="handleFile(this)" />
   </div>
 
-  <!-- RESULTS -->
+  <!-- ═══ RESULTS SCREEN ═══ -->
   <div id="scr-results" class="screen hidden">
     <div class="results-screen">
       <div id="img-preview" class="img-preview hidden"><img id="img-el" src="" alt="Documento" /></div>
@@ -235,6 +243,9 @@
         <div class="field"><label>Nº Documento</label><input id="f-docnum" placeholder="FT 2024/001" oninput="updatePreview()" /></div>
         <div class="field"><label>Data</label><input id="f-date" placeholder="01/01/2024" oninput="updatePreview()" /></div>
         <div class="field"><label>Valor Total (€)</label><input id="f-total" placeholder="0,00" inputmode="decimal" oninput="updatePreview()" /></div>
+
+        <span class="raw-toggle" onclick="toggleRaw()">Ver texto OCR completo ▾</span>
+        <div id="raw-text-box" class="raw-text hidden"></div>
       </div>
 
       <div class="email-box">
@@ -243,20 +254,20 @@
       </div>
 
       <div class="actions">
-        <button class="btn btn-secondary" onclick="goBack()">Nova Captura</button>
-        <button class="btn btn-send" onclick="sendEmail()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <button class="btn btn-secondary" onclick="goBack()">Nova</button>
+        <button class="btn btn-send" id="btn-send" onclick="sendEmail()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           Enviar Email
         </button>
       </div>
     </div>
   </div>
 
-  <!-- HISTORY -->
+  <!-- ═══ HISTORY SCREEN ═══ -->
   <div id="scr-history" class="screen hidden">
     <div class="history-screen">
       <div id="history-empty" class="empty-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <h3>Sem documentos</h3>
         <p>Os documentos enviados aparecerão aqui.</p>
       </div>
@@ -264,70 +275,106 @@
     </div>
   </div>
 
-  <!-- SETTINGS -->
+  <!-- ═══ SETTINGS SCREEN ═══ -->
   <div id="scr-settings" class="screen hidden">
     <div class="settings-screen">
       <div class="settings-section">
         <h4>Email de Destino</h4>
         <div class="field">
-          <input id="s-email" type="email" placeholder="contabilidade@empresa.pt" inputmode="email" onchange="saveEmail()" />
+          <input id="s-email" type="email" placeholder="contabilidade@empresa.pt" inputmode="email" onchange="saveSetting('email', this.value)" />
         </div>
-        <p style="font-size:12px;color:var(--text-sec);margin-top:4px">Todos os documentos serão enviados para este endereço.</p>
       </div>
+
+      <div class="settings-section">
+        <h4>EmailJS (envio directo)</h4>
+        <div class="field">
+          <label>Public Key</label>
+          <input id="s-ejs-pubkey" placeholder="Ex: abCdEfGhIjK1234" onchange="saveSetting('ejs_pubkey', this.value)" />
+        </div>
+        <div class="field">
+          <label>Service ID</label>
+          <input id="s-ejs-service" placeholder="Ex: service_abc123" onchange="saveSetting('ejs_service', this.value)" />
+        </div>
+        <div class="field">
+          <label>Template ID</label>
+          <input id="s-ejs-template" placeholder="Ex: template_xyz789" onchange="saveSetting('ejs_template', this.value)" />
+        </div>
+        <p class="settings-help">
+          Para enviar emails directamente da app sem abrir outra app, precisas de uma conta gratuita no EmailJS.
+          Consulta o guia COMO-INSTALAR.md para o passo-a-passo de configuração.
+        </p>
+        <button class="btn btn-primary" style="margin-top:12px;padding:12px" onclick="testEmailJS()">
+          Testar Envio
+        </button>
+      </div>
+
       <div class="settings-section">
         <h4>Sobre</h4>
-        <div class="settings-row"><span>Versão</span><span class="val">1.0.0</span></div>
-        <div class="settings-row"><span>OCR Engine</span><span class="val">Tesseract.js</span></div>
+        <div class="settings-row"><span>Versão</span><span class="val">2.0.0</span></div>
+        <div class="settings-row"><span>OCR Engine</span><span class="val">Tesseract.js 5</span></div>
         <div class="settings-row"><span>Idiomas OCR</span><span class="val">PT, EN</span></div>
+        <div class="settings-row"><span>Email Engine</span><span class="val">EmailJS</span></div>
         <div class="settings-row" style="border:none"><span>Modo</span><span class="val">PWA Offline</span></div>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════ TAB BAR ════════════════ -->
+  <!-- TAB BAR -->
   <nav class="tab-bar" id="tab-bar">
     <button class="tab active" data-tab="scan" onclick="switchTab('scan')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       Digitalizar
     </button>
     <button class="tab" data-tab="history" onclick="switchTab('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Histórico
     </button>
     <button class="tab" data-tab="settings" onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Definições
     </button>
   </nav>
 
-  <!-- ════════════════ OVERLAYS ════════════════ -->
+  <!-- PROCESSING OVERLAY -->
   <div id="processing" class="overlay hidden">
     <div class="overlay-card">
       <div class="spinner"></div>
-      <p style="font-size:16px;font-weight:600;margin-bottom:6px">A processar OCR…</p>
-      <p id="progress-text" style="font-size:13px;color:var(--text-sec)">0%</p>
+      <p style="font-size:16px;font-weight:600;margin-bottom:6px" id="proc-title">A processar imagem…</p>
+      <p id="progress-text" style="font-size:13px;color:var(--text-sec)">Preparar</p>
       <div class="pbar"><div id="pbar-fill" class="pbar-fill"></div></div>
     </div>
   </div>
 
-  <div id="toast" class="toast hidden">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    Email preparado!
+  <!-- SENDING OVERLAY -->
+  <div id="sending" class="overlay hidden">
+    <div class="overlay-card">
+      <div class="spinner"></div>
+      <p style="font-size:16px;font-weight:600">A enviar email…</p>
+    </div>
   </div>
+
+  <div id="toast" class="toast hidden"></div>
 </div>
 
 <script>
 /* ══════════════════════════════════════════════
-   STATE
+   STATE & HELPERS
    ══════════════════════════════════════════════ */
-const DEFAULT_EMAIL = "financeiro@filamentospro.pt";
-const MAX_HISTORY = 50;
 const $ = (id) => document.getElementById(id);
+const LS = {
+  get: (k, d) => localStorage.getItem("is_" + k) || d || "",
+  set: (k, v) => localStorage.setItem("is_" + k, v),
+};
 
 let state = {
-  email: localStorage.getItem("is_email") || DEFAULT_EMAIL,
+  email:       LS.get("email", "financeiro@filamentospro.pt"),
+  ejs_pubkey:  LS.get("ejs_pubkey"),
+  ejs_service: LS.get("ejs_service"),
+  ejs_template:LS.get("ejs_template"),
   docType: "Fatura",
   imageUrl: null,
+  imageBase64: null,
+  rawText: "",
   currentTab: "scan",
   history: JSON.parse(localStorage.getItem("is_history") || "[]"),
 };
@@ -337,13 +384,12 @@ let state = {
    ══════════════════════════════════════════════ */
 function init() {
   $("s-email").value = state.email;
+  $("s-ejs-pubkey").value = state.ejs_pubkey;
+  $("s-ejs-service").value = state.ejs_service;
+  $("s-ejs-template").value = state.ejs_template;
   updateBanners();
   renderScanHistory();
-
-  // Register service worker
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
-  }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
 /* ══════════════════════════════════════════════
@@ -351,25 +397,13 @@ function init() {
    ══════════════════════════════════════════════ */
 function switchTab(tab) {
   state.currentTab = tab;
-
-  // Screens
-  ["scan", "history", "settings"].forEach((t) => {
-    $("scr-" + t).classList.toggle("hidden", t !== tab);
-  });
-
-  // Show results header or main header
-  $("header-main").classList.toggle("hidden", false);
+  ["scan", "history", "settings"].forEach((t) => $("scr-" + t).classList.toggle("hidden", t !== tab));
+  $("header-main").classList.remove("hidden");
   $("header-results").classList.add("hidden");
   $("scr-results").classList.add("hidden");
   $("tab-bar").classList.remove("hidden");
-
-  // Tab bar active
-  document.querySelectorAll(".tab").forEach((el) => {
-    el.classList.toggle("active", el.dataset.tab === tab);
-  });
-
+  document.querySelectorAll(".tab").forEach((el) => el.classList.toggle("active", el.dataset.tab === tab));
   updateBanners();
-
   if (tab === "history") renderFullHistory();
   if (tab === "scan") renderScanHistory();
 }
@@ -382,29 +416,131 @@ function showResults() {
   $("tab-bar").classList.add("hidden");
 }
 
-function goBack() {
-  state.imageUrl = null;
-  switchTab("scan");
-}
+function goBack() { state.imageUrl = null; state.imageBase64 = null; switchTab("scan"); }
 
 /* ══════════════════════════════════════════════
-   BANNERS
+   BANNERS & TOAST
    ══════════════════════════════════════════════ */
 function updateBanners() {
   const onScan = state.currentTab === "scan";
-  if (!onScan || !$("scr-scan").offsetParent) {
-    $("banner-warn").classList.add("hidden");
-    $("banner-ok").classList.add("hidden");
-    return;
-  }
-  if (state.email) {
-    $("banner-warn").classList.add("hidden");
+  $("banner-warn").classList.add("hidden");
+  $("banner-ok").classList.add("hidden");
+  if (!onScan) return;
+
+  const configured = state.ejs_pubkey && state.ejs_service && state.ejs_template;
+  if (!configured) {
+    $("banner-warn").classList.remove("hidden");
+  } else if (state.email) {
     $("banner-ok").classList.remove("hidden");
     $("banner-email").textContent = state.email;
-  } else {
-    $("banner-ok").classList.add("hidden");
-    $("banner-warn").classList.remove("hidden");
   }
+}
+
+function showToast(msg, isError) {
+  const t = $("toast");
+  t.className = "toast " + (isError ? "toast-err" : "toast-ok");
+  t.innerHTML = (isError
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+  ) + " " + msg;
+  t.classList.remove("hidden");
+  setTimeout(() => t.classList.add("hidden"), 4000);
+}
+
+/* ══════════════════════════════════════════════
+   IMAGE PRE-PROCESSING (improves OCR significantly)
+   ══════════════════════════════════════════════ */
+function preprocessImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = $("process-canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Scale up small images (OCR works better on larger images)
+        const targetWidth = Math.max(img.width, 2000);
+        const scale = targetWidth / img.width;
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+
+        // Draw scaled
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Get pixel data
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Convert to grayscale
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+          data[i] = data[i+1] = data[i+2] = gray;
+        }
+
+        // Increase contrast (stretch histogram)
+        let min = 255, max = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] < min) min = data[i];
+          if (data[i] > max) max = data[i];
+        }
+        const range = max - min || 1;
+        for (let i = 0; i < data.length; i += 4) {
+          const val = Math.round(((data[i] - min) / range) * 255);
+          data[i] = data[i+1] = data[i+2] = val;
+        }
+
+        // Adaptive binarisation (Sauvola-inspired)
+        // Helps with uneven lighting on receipts
+        const w = canvas.width, h = canvas.height;
+        const blockSize = 31;
+        const half = Math.floor(blockSize / 2);
+        const k = 0.15;
+        const output = new Uint8ClampedArray(data.length);
+
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            let sum = 0, sumSq = 0, count = 0;
+
+            const yStart = Math.max(0, y - half);
+            const yEnd = Math.min(h - 1, y + half);
+            const xStart = Math.max(0, x - half);
+            const xEnd = Math.min(w - 1, x + half);
+
+            // Sample every 3rd pixel for performance
+            for (let yy = yStart; yy <= yEnd; yy += 3) {
+              for (let xx = xStart; xx <= xEnd; xx += 3) {
+                const v = data[(yy * w + xx) * 4];
+                sum += v; sumSq += v * v; count++;
+              }
+            }
+
+            const mean = sum / count;
+            const variance = (sumSq / count) - (mean * mean);
+            const std = Math.sqrt(Math.max(0, variance));
+            const threshold = mean * (1 + k * (std / 128 - 1));
+
+            const px = data[idx] > threshold ? 255 : 0;
+            output[idx] = output[idx+1] = output[idx+2] = px;
+            output[idx+3] = 255;
+          }
+        }
+
+        const finalData = new ImageData(output, w, h);
+        ctx.putImageData(finalData, 0, 0);
+
+        // Convert to blob
+        canvas.toBlob((blob) => {
+          // Also store base64 for email attachment
+          state.imageBase64 = canvas.toDataURL("image/jpeg", 0.85);
+          resolve(blob);
+        }, "image/jpeg", 0.92);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ══════════════════════════════════════════════
@@ -420,26 +556,42 @@ async function handleFile(input) {
 
   state.imageUrl = URL.createObjectURL(file);
   $("processing").classList.remove("hidden");
+  $("proc-title").textContent = "A processar imagem…";
+  $("progress-text").textContent = "Melhorar contraste…";
+  $("pbar-fill").style.width = "5%";
 
   try {
-    const result = await Tesseract.recognize(file, "por+eng", {
+    // Step 1: preprocess image
+    const processedBlob = await preprocessImage(file);
+
+    $("progress-text").textContent = "Iniciar OCR…";
+    $("pbar-fill").style.width = "15%";
+
+    // Step 2: OCR with optimised settings
+    const result = await Tesseract.recognize(processedBlob, "por+eng", {
       logger: (m) => {
         if (m.status === "recognizing text") {
-          const pct = Math.round((m.progress || 0) * 100);
+          const pct = 15 + Math.round((m.progress || 0) * 85);
+          $("proc-title").textContent = "A ler texto…";
           $("progress-text").textContent = pct + "%";
           $("pbar-fill").style.width = pct + "%";
+        } else if (m.status === "loading tesseract core" || m.status === "loading language traineddata") {
+          $("progress-text").textContent = "A carregar motor OCR…";
         }
       },
     });
+
+    state.rawText = result.data.text;
     populateFields(result.data.text);
+
   } catch (e) {
     console.error("OCR:", e);
+    state.rawText = "";
     populateFields("");
   }
 
   $("processing").classList.add("hidden");
 
-  // Show preview
   if (state.imageUrl) {
     $("img-el").src = state.imageUrl;
     $("img-preview").classList.remove("hidden");
@@ -448,75 +600,193 @@ async function handleFile(input) {
 }
 
 /* ══════════════════════════════════════════════
-   FIELD EXTRACTION
+   FIELD EXTRACTION — improved patterns for PT invoices
    ══════════════════════════════════════════════ */
-function rx(text, patterns) {
+function rx(text, patterns, flags) {
   for (const p of patterns) {
-    const m = text.match(p);
+    const re = new RegExp(p, flags || "i");
+    const m = text.match(re);
     if (m) return (m[1] || m[0]).trim();
   }
   return "";
 }
 
-function populateFields(raw) {
-  const lines = raw.split("\n").filter((l) => l.trim());
+function rxAll(text, pattern, flags) {
+  const results = [];
+  const re = new RegExp(pattern, (flags || "") + "g");
+  let m;
+  while ((m = re.exec(text)) !== null) results.push((m[1] || m[0]).trim());
+  return results;
+}
 
-  // Supplier — first plausible company name
-  let supplier = "";
-  const skip = /^(fatura|factura|recibo|invoice|receipt|nif|data|date|total|iva|vat|original|duplicado)/i;
-  for (const l of lines.slice(0, 10)) {
-    const c = l.trim();
-    if (c.length > 3 && c.length < 80 && !/^\d+$/.test(c) && !skip.test(c)) { supplier = c; break; }
+function populateFields(raw) {
+  const lines = raw.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  const text = raw;
+  const textUp = raw.toUpperCase();
+
+  // ── NIF ──
+  // Portuguese NIF: 9 digits starting with 1,2,3,5,6,7,8,9
+  let nif = "";
+
+  // Try labelled first
+  const nifLabelled = rx(text, [
+    "(?:N\\.?I\\.?F\\.?|NIPC|NIF|Contribuinte|Nº\\s*(?:de\\s*)?Contribuinte|VAT)\\s*[:\\-]?\\s*(\\d[\\s.]?\\d[\\s.]?\\d[\\s.]?\\d[\\s.]?\\d[\\s.]?\\d[\\s.]?\\d[\\s.]?\\d[\\s.]?\\d)",
+  ]);
+  if (nifLabelled) {
+    nif = nifLabelled.replace(/[\s.]/g, "");
   }
 
-  const nif = rx(raw, [
-    /(?:NIF|NIPC|N\.?I\.?F\.?|Contribuinte)\s*:?\s*(\d{9})/i,
-    /PT\s*(\d{9})/,
-    /\b([1-3569]\d{8})\b/,
+  // Try PT prefix
+  if (!nif) {
+    const ptNif = rx(text, ["PT\\s*(\\d{9})\\b"]);
+    if (ptNif) nif = ptNif;
+  }
+
+  // Fallback: find all 9-digit numbers and pick the one with a valid NIF check digit
+  if (!nif) {
+    const candidates = rxAll(text, "\\b(\\d{9})\\b");
+    for (const c of candidates) {
+      if (isValidNIF(c)) { nif = c; break; }
+    }
+  }
+
+  // ── DOCUMENT NUMBER ──
+  const docNum = rx(text, [
+    // Standard PT formats: FT 2024/1234, FR-A/12345, FS SEDE/4567
+    "(?:FT|FR|RC|FS|ND|NC|VD|GR|GT|OR)\\s*[-\\/]?\\s*([A-Z0-9]*\\s*[-\\/]\\s*\\d{1,8})",
+    // Fatura Nº, Recibo Nº...
+    "(?:Fatura|Factura|Recibo|Invoice|Receipt|Doc(?:umento)?|Nota\\s*(?:de\\s*)?(?:Cr[eé]dito|D[eé]bito))\\s*(?:N[.ºo°]?|#|Num\\.?|:)\\s*([A-Z0-9\\-\\/\\s]{2,25})",
+    // N.º followed by doc code
+    "N[.ºo°]\\s*:?\\s*([A-Z]{1,4}\\s*[-\\/]\\s*[A-Z0-9]*\\s*[-\\/]?\\s*\\d+)",
+    // Generic: DOC-number/number
+    "Documento\\s*:?\\s*([A-Z0-9\\-\\/]{3,20})",
   ]);
 
-  const docNum = rx(raw, [
-    /(?:Fatura|Factura|Recibo|Invoice|Receipt|Doc(?:umento)?)\s*(?:N[.ºo°]?|#|:)\s*([A-Z0-9\-\/\s]{3,20})/i,
-    /(?:FT|FR|RC|FS|ND|NC|VD)\s*[-\/]?\s*(\d{4}[\/-]\d{1,6})/i,
-    /(?:FT|FR|RC|FS|ND|NC|VD)\s*[-\/]?\s*([A-Z]?\d+[\/-]\d+)/i,
+  // ── DATE ──
+  let dateStr = rx(text, [
+    // Labelled dates
+    "(?:Data|Date|Emiss[aã]o|Data\\s*(?:de\\s*)?Emiss[aã]o|Data\\s*Documento)\\s*[:\\-]?\\s*(\\d{1,2}\\s*[\\/-]\\s*\\d{1,2}\\s*[\\/-]\\s*\\d{2,4})",
+    // Written month: "15 de Janeiro de 2024"
+    "(\\d{1,2})\\s*(?:de\\s*)?(Janeiro|Fevereiro|Mar[çc]o|Abril|Maio|Junho|Julho|Agosto|Setembro|Outubro|Novembro|Dezembro)\\s*(?:de\\s*)?(\\d{4})",
   ]);
 
-  const dateStr = rx(raw, [
-    /(?:Data|Date|Emissão)\s*:?\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i,
-    /(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/,
-    /(\d{4}[\/-]\d{1,2}[\/-]\d{1,2})/,
-  ]);
+  // Convert written month to numeric
+  if (!dateStr) {
+    const monthMap = { janeiro:"01", fevereiro:"02", "março":"03", marco:"03", abril:"04", maio:"05", junho:"06", julho:"07", agosto:"08", setembro:"09", outubro:"10", novembro:"11", dezembro:"12" };
+    const mMatch = text.match(/(\d{1,2})\s*(?:de\s*)?(Janeiro|Fevereiro|Mar[çc]o|Abril|Maio|Junho|Julho|Agosto|Setembro|Outubro|Novembro|Dezembro)\s*(?:de\s*)?(\d{4})/i);
+    if (mMatch) {
+      dateStr = mMatch[1].padStart(2, "0") + "/" + (monthMap[mMatch[2].toLowerCase()] || "01") + "/" + mMatch[3];
+    }
+  }
 
-  const total = rx(raw, [
-    /(?:Total\s*(?:c\/\s*IVA|Geral|a\s*Pagar|Due|Documento))\s*:?\s*€?\s*([\d.,]+)/i,
-    /(?:Valor\s*Total|Grand\s*Total|Amount\s*Due|Montante)\s*:?\s*€?\s*([\d.,]+)/i,
-    /(?:TOTAL)\s*:?\s*€?\s*([\d.,]+)/i,
-    /€\s*([\d.,]+)/,
-  ]);
+  // Fallback: any DD/MM/YYYY
+  if (!dateStr) {
+    dateStr = rx(text, [
+      "(\\d{2}[\\/-]\\d{2}[\\/-]\\d{4})",
+      "(\\d{1,2}[\\/-]\\d{1,2}[\\/-]\\d{4})",
+      "(\\d{4}[\\/-]\\d{2}[\\/-]\\d{2})",
+    ]);
+  }
 
-  // Doc type
-  const lower = raw.toLowerCase();
-  state.docType = lower.includes("fatura") || lower.includes("invoice") ? "Fatura"
+  if (dateStr) dateStr = dateStr.replace(/\s/g, "");
+
+  // ── TOTAL ──
+  let total = "";
+
+  // Try labelled totals (most specific first)
+  const totalPatterns = [
+    "(?:Total\\s*(?:c\\/\\s*IVA|com\\s*IVA|Geral|a\\s*Pagar|Liquido|L[ií]quido|Due|Documento|Final|EUR))\\s*[:\\-]?\\s*€?\\s*([\\d\\s.,]+)",
+    "(?:Valor\\s*(?:Total|a\\s*Pagar)|Grand\\s*Total|Amount\\s*Due|Montante\\s*(?:Total|Pagar)|TOTAL\\s*A\\s*PAGAR)\\s*[:\\-]?\\s*€?\\s*([\\d\\s.,]+)",
+    "(?:TOTAL)\\s*[:\\-]?\\s*€?\\s*([\\d.,]+)",
+  ];
+
+  for (const p of totalPatterns) {
+    const m = rx(text, [p]);
+    if (m) {
+      total = m.replace(/\s/g, "");
+      // Validate it looks like a monetary amount
+      if (/^\d/.test(total) && parseFloat(total.replace(",", ".")) > 0) break;
+      total = "";
+    }
+  }
+
+  // Fallback: € followed by amount
+  if (!total) {
+    // Find all € amounts and pick the largest (likely the total)
+    const euroAmounts = rxAll(text, "€\\s*([\\d.,]+)");
+    if (euroAmounts.length > 0) {
+      let maxVal = 0;
+      for (const a of euroAmounts) {
+        const v = parseFloat(a.replace(/\./g, "").replace(",", "."));
+        if (v > maxVal) { maxVal = v; total = a; }
+      }
+    }
+  }
+
+  // ── SUPPLIER ──
+  let supplier = "";
+  const skipRe = /^(fatura|factura|recibo|invoice|receipt|nif|nipc|contribuinte|data|date|total|iva|vat|original|duplicado|c[oó]pia|cliente|morada|email|telefone|tel|www|http|page|\d+[\/\-]\d+|\d{1,2}[\/\-]\d{1,2}|euros?|€)/i;
+  const isAllNum = /^[\d\s.,€%]+$/;
+
+  for (const line of lines.slice(0, 12)) {
+    if (line.length < 3 || line.length > 80) continue;
+    if (skipRe.test(line)) continue;
+    if (isAllNum.test(line)) continue;
+    // Skip lines that look like addresses (have postal codes)
+    if (/\d{4}[\s-]\d{3}/.test(line)) continue;
+    // Skip lines that are mostly numbers
+    const numChars = (line.match(/\d/g) || []).length;
+    if (numChars / line.length > 0.5) continue;
+
+    supplier = line;
+    break;
+  }
+
+  // ── DOC TYPE ──
+  const lower = text.toLowerCase();
+  state.docType = /fatura simplificada|fatura-recibo|fatura recibo/i.test(text) ? "Fatura"
+    : lower.includes("fatura") || lower.includes("factura") || lower.includes("invoice") ? "Fatura"
     : lower.includes("recibo") || lower.includes("receipt") ? "Recibo"
     : "Documento";
 
+  // ── POPULATE UI ──
   $("f-supplier").value = supplier;
   $("f-nif").value = nif;
-  $("f-docnum").value = docNum;
-  $("f-date").value = dateStr;
+  $("f-docnum").value = docNum ? docNum.replace(/\s+/g, " ").trim() : "";
+  $("f-date").value = dateStr || "";
   $("f-total").value = total;
+  $("raw-text-box").textContent = raw || "(nenhum texto detectado)";
 
   document.querySelectorAll(".type-btn").forEach((b) => b.classList.toggle("active", b.dataset.type === state.docType));
   updatePreview();
 }
 
+// Portuguese NIF validation (mod 11 check digit)
+function isValidNIF(nif) {
+  if (!/^\d{9}$/.test(nif)) return false;
+  const first = parseInt(nif[0]);
+  if (![1,2,3,5,6,7,8,9].includes(first)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 8; i++) {
+    sum += parseInt(nif[i]) * (9 - i);
+  }
+  const remainder = sum % 11;
+  const check = remainder < 2 ? 0 : 11 - remainder;
+  return check === parseInt(nif[8]);
+}
+
 /* ══════════════════════════════════════════════
-   PREVIEW & SEND
+   PREVIEW & DOC TYPE
    ══════════════════════════════════════════════ */
 function setDocType(btn) {
   state.docType = btn.dataset.type;
   document.querySelectorAll(".type-btn").forEach((b) => b.classList.toggle("active", b === btn));
   updatePreview();
+}
+
+function toggleRaw() {
+  $("raw-text-box").classList.toggle("hidden");
 }
 
 function buildSubject() {
@@ -530,71 +800,151 @@ function buildSubject() {
 }
 
 function buildBody() {
-  return [
-    "Tipo: " + state.docType,
-    "Fornecedor: " + ($("f-supplier").value || "N/A"),
-    "NIF: " + ($("f-nif").value || "N/A"),
-    "Nº Documento: " + ($("f-docnum").value || "N/A"),
-    "Data: " + ($("f-date").value || "N/A"),
-    "Valor Total: " + ($("f-total").value ? "€" + $("f-total").value : "N/A"),
-    "", "---", "Enviado via InvoiceScan",
-  ].join("\n");
+  return "Tipo: " + state.docType + "\n" +
+    "Fornecedor: " + ($("f-supplier").value || "N/A") + "\n" +
+    "NIF: " + ($("f-nif").value || "N/A") + "\n" +
+    "Nº Documento: " + ($("f-docnum").value || "N/A") + "\n" +
+    "Data: " + ($("f-date").value || "N/A") + "\n" +
+    "Valor Total: " + ($("f-total").value ? "€" + $("f-total").value : "N/A") + "\n" +
+    "\n---\nEnviado via InvoiceScan";
 }
 
 function updatePreview() {
   $("preview-subject").textContent = buildSubject();
 }
 
-function sendEmail() {
-  const to = state.email || "";
-  const subject = buildSubject();
-  const body = buildBody();
-  window.location.href = "mailto:" + encodeURIComponent(to) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+/* ══════════════════════════════════════════════
+   EMAIL — DIRECT SEND VIA EMAILJS
+   ══════════════════════════════════════════════ */
+async function sendEmail() {
+  const pk = state.ejs_pubkey;
+  const sid = state.ejs_service;
+  const tid = state.ejs_template;
 
-  // Save
-  state.history.unshift({
-    supplier: $("f-supplier").value, nif: $("f-nif").value,
-    docNumber: $("f-docnum").value, date: $("f-date").value,
-    total: $("f-total").value, docType: state.docType,
-    sentAt: new Date().toISOString(),
-  });
-  state.history = state.history.slice(0, MAX_HISTORY);
-  localStorage.setItem("is_history", JSON.stringify(state.history));
+  if (!pk || !sid || !tid) {
+    showToast("Configura o EmailJS nas Definições", true);
+    return;
+  }
 
-  $("toast").classList.remove("hidden");
-  setTimeout(() => $("toast").classList.add("hidden"), 3000);
+  const btn = $("btn-send");
+  btn.classList.add("btn-sending");
+  btn.innerHTML = "A enviar…";
+  $("sending").classList.remove("hidden");
+
+  try {
+    emailjs.init(pk);
+
+    const templateParams = {
+      to_email: state.email,
+      subject: buildSubject(),
+      body: buildBody(),
+      doc_type: state.docType,
+      supplier: $("f-supplier").value || "N/A",
+      nif: $("f-nif").value || "N/A",
+      doc_number: $("f-docnum").value || "N/A",
+      doc_date: $("f-date").value || "N/A",
+      total: $("f-total").value ? "€" + $("f-total").value : "N/A",
+    };
+
+    // Attach image if available (EmailJS supports base64 attachments)
+    if (state.imageBase64) {
+      templateParams.image_data = state.imageBase64;
+    }
+
+    await emailjs.send(sid, tid, templateParams);
+
+    // Save to history
+    state.history.unshift({
+      supplier: $("f-supplier").value, nif: $("f-nif").value,
+      docNumber: $("f-docnum").value, date: $("f-date").value,
+      total: $("f-total").value, docType: state.docType,
+      sentAt: new Date().toISOString(), status: "sent",
+    });
+    state.history = state.history.slice(0, 50);
+    localStorage.setItem("is_history", JSON.stringify(state.history));
+
+    showToast("Email enviado com sucesso!");
+
+    // Reset after delay
+    setTimeout(() => goBack(), 1500);
+
+  } catch (err) {
+    console.error("EmailJS error:", err);
+    showToast("Erro ao enviar: " + (err.text || err.message || "verifica as definições"), true);
+  } finally {
+    $("sending").classList.add("hidden");
+    btn.classList.remove("btn-sending");
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar Email';
+  }
+}
+
+/* ══════════════════════════════════════════════
+   TEST EMAILJS
+   ══════════════════════════════════════════════ */
+async function testEmailJS() {
+  const pk = $("s-ejs-pubkey").value.trim();
+  const sid = $("s-ejs-service").value.trim();
+  const tid = $("s-ejs-template").value.trim();
+  const email = $("s-email").value.trim();
+
+  if (!pk || !sid || !tid) {
+    showToast("Preenche todos os campos do EmailJS", true);
+    return;
+  }
+
+  $("sending").classList.remove("hidden");
+
+  try {
+    emailjs.init(pk);
+    await emailjs.send(sid, tid, {
+      to_email: email,
+      subject: "InvoiceScan — Teste de Configuração",
+      body: "Se recebeste este email, a configuração do InvoiceScan está correcta!",
+      doc_type: "Teste", supplier: "InvoiceScan", nif: "000000000",
+      doc_number: "TESTE-001", doc_date: new Date().toLocaleDateString("pt-PT"),
+      total: "€0,00",
+    });
+    showToast("Email de teste enviado para " + email);
+  } catch (err) {
+    console.error("Test error:", err);
+    showToast("Erro: " + (err.text || err.message || "verifica os dados"), true);
+  } finally {
+    $("sending").classList.add("hidden");
+  }
 }
 
 /* ══════════════════════════════════════════════
    SETTINGS
    ══════════════════════════════════════════════ */
-function saveEmail() {
-  state.email = $("s-email").value.trim();
-  localStorage.setItem("is_email", state.email);
+function saveSetting(key, val) {
+  val = val.trim();
+  state[key] = val;
+  LS.set(key, val);
   updateBanners();
 }
 
 /* ══════════════════════════════════════════════
-   HISTORY RENDERING
+   HISTORY
    ══════════════════════════════════════════════ */
 function historyItemHTML(h) {
   return '<div class="history-item"><div>' +
-    '<div class="name">' + (h.supplier || "Sem fornecedor") + '</div>' +
-    '<div class="meta">' + h.docType + (h.docNumber ? " #" + h.docNumber : "") + (h.date ? " &bull; " + h.date : "") + '</div>' +
-    '</div>' + (h.total ? '<span class="amount">€' + h.total + '</span>' : '') + '</div>';
+    '<div class="name">' + esc(h.supplier || "Sem fornecedor") + '</div>' +
+    '<div class="meta">' + esc(h.docType) + (h.docNumber ? " #" + esc(h.docNumber) : "") + (h.date ? " &bull; " + esc(h.date) : "") +
+    (h.status === "sent" ? ' &bull; <span style="color:var(--accent)">✓ Enviado</span>' : '') + '</div>' +
+    '</div>' + (h.total ? '<span class="amount">€' + esc(h.total) + '</span>' : '') + '</div>';
 }
 
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
 function renderScanHistory() {
-  const el = $("scan-history");
-  const list = $("scan-history-list");
+  const el = $("scan-history"); const list = $("scan-history-list");
   if (!state.history.length) { el.classList.add("hidden"); return; }
   el.classList.remove("hidden");
   list.innerHTML = state.history.slice(0, 3).map(historyItemHTML).join("");
 }
 
 function renderFullHistory() {
-  const empty = $("history-empty");
-  const list = $("history-list");
+  const empty = $("history-empty"); const list = $("history-list");
   if (!state.history.length) { empty.classList.remove("hidden"); list.innerHTML = ""; return; }
   empty.classList.add("hidden");
   list.innerHTML = state.history.map(historyItemHTML).join("");
